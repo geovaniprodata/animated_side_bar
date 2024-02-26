@@ -26,6 +26,7 @@ class SideBarAnimated extends StatefulWidget {
   bool settingsDivider;
   Curve curve;
   TextStyle textStyle;
+  ValueNotifier<int> itemIndex;
 
   SideBarAnimated({
     super.key,
@@ -45,24 +46,22 @@ class SideBarAnimated extends StatefulWidget {
     this.sideBarAnimationDuration = const Duration(milliseconds: 700),
     this.floatingAnimationDuration = const Duration(milliseconds: 500),
     this.dividerColor = const Color(0xff929292),
-    this.textStyle =
-        const TextStyle(fontFamily: "SFPro", fontSize: 16, color: Colors.white),
+    this.textStyle = const TextStyle(fontFamily: "SFPro", fontSize: 16, color: Colors.white),
     required this.mainLogoImage,
     required this.sidebarItems,
     required this.widthSwitch,
     required this.onTap,
+    required this.itemIndex,
   });
 
   @override
   State<SideBarAnimated> createState() => _SideBarAnimatedState();
 }
 
-class _SideBarAnimatedState extends State<SideBarAnimated>
-    with SingleTickerProviderStateMixin {
+class _SideBarAnimatedState extends State<SideBarAnimated> with SingleTickerProviderStateMixin {
   late double _width;
   late double _height;
   late double sideBarItemHeight = 48;
-  double _itemIndex = 0.0;
   bool _minimize = false;
   late AnimationController _animationController;
   late Animation<double> _floating;
@@ -73,14 +72,12 @@ class _SideBarAnimatedState extends State<SideBarAnimated>
     if (widget.sidebarItems.isEmpty) {
       throw "Side bar Items Can't be empty";
     }
-    _animationController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 200))
+    _animationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 200))
       ..addListener(() {
         setState(() {});
       });
 
-    _floating = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(
-        parent: _animationController, curve: Curves.fastOutSlowIn));
+    _floating = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(parent: _animationController, curve: Curves.fastOutSlowIn));
     super.initState();
   }
 
@@ -103,11 +100,11 @@ class _SideBarAnimatedState extends State<SideBarAnimated>
     //       (Timer timer) {
     // if (_itemIndex.round() == index) {
     ///here when we reach the index then we stop because we hit the targeted index
-    setState(() {
-      _itemIndex = index.toDouble();
-      // timer.cancel();
-      // _counterTimer.cancel();
-    });
+
+    widget.itemIndex.value = index;
+    // timer.cancel();
+    // _counterTimer.cancel();
+
     widget.onTap?.call(index);
     // } else if (_itemIndex.floor() < index) {
     //   setState(() => _itemIndex += 1);
@@ -124,142 +121,132 @@ class _SideBarAnimatedState extends State<SideBarAnimated>
     _width = MediaQuery.sizeOf(context).width;
 
     ///using animated container for the side bar for smooth responsive
-    return AnimatedContainer(
-      curve: widget.curve,
-      height: _height,
-      margin: const EdgeInsets.all(20),
-      width: _width >= widget.widthSwitch && !_minimize
-          ? widget.sideBarWidth
-          : widget.sideBarSmallWidth,
-      decoration: BoxDecoration(
-        color: widget.sideBarColor,
-        borderRadius: BorderRadius.circular(widget.borderRadius),
-      ),
-      duration: widget.sideBarAnimationDuration,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: EdgeInsets.only(
-                left: _width >= widget.widthSwitch && !_minimize ? 20 : 18,
-                top: 24),
-            child: Image.asset(
-              widget.mainLogoImage,
-              width: 48,
-              height: 48,
+    return ValueListenableBuilder(
+        valueListenable: widget.itemIndex,
+        builder: (context, value, child) {
+          return AnimatedContainer(
+            curve: widget.curve,
+            height: _height,
+            margin: const EdgeInsets.all(20),
+            width: _width >= widget.widthSwitch && !_minimize ? widget.sideBarWidth : widget.sideBarSmallWidth,
+            decoration: BoxDecoration(
+              color: widget.sideBarColor,
+              borderRadius: BorderRadius.circular(widget.borderRadius),
             ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.only(
-                  top: 40,
-                  left: _width >= widget.widthSwitch && !_minimize ? 20 : 18,
-                  right: _width >= widget.widthSwitch && !_minimize ? 20 : 18,
-                  bottom: 24),
-              child: Column(
-                children: [
-                  SizedBox(
-                    height: 786.0,
-                    child: Stack(
+            duration: widget.sideBarAnimationDuration,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(left: _width >= widget.widthSwitch && !_minimize ? 20 : 18, top: 24),
+                  child: Image.asset(
+                    widget.mainLogoImage,
+                    width: 48,
+                    height: 48,
+                  ),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: EdgeInsets.only(
+                        top: 40,
+                        left: _width >= widget.widthSwitch && !_minimize ? 20 : 18,
+                        right: _width >= widget.widthSwitch && !_minimize ? 20 : 18,
+                        bottom: 24),
+                    child: Column(
                       children: [
-                        ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemBuilder: (context, index) {
-                            return sideBarItem(
-                                textStyle: widget.textStyle,
-                                unselectedIconColor: widget.unselectedIconColor,
-                                unSelectedTextColor: widget.unSelectedTextColor,
-                                widthSwitch: widget.widthSwitch,
-                                minimize: _minimize,
-                                height: sideBarItemHeight,
-                                hoverColor: widget.hoverColor,
-                                splashColor: widget.splashColor,
-                                highlightColor: widget.highlightColor,
-                                width: _width,
-                                icon:
-                                    widget.sidebarItems[index].iconUnselected ??
-                                        widget.sidebarItems[index].iconSelected,
-                                text: widget.sidebarItems[index].text,
-                                onTap: () => moveToNewIndex(index));
-                          },
-                          separatorBuilder: (context, index) {
-                            if (index == widget.sidebarItems.length - 2 &&
-                                widget.settingsDivider) {
-                              return Divider(
-                                height: 12,
-                                thickness: 0.2,
-                                color: widget.dividerColor,
-                              );
-                            } else {
-                              return const SizedBox(
-                                height: 8,
-                              );
-                            }
-                          },
-                          itemCount: widget.sidebarItems.length,
-                        ),
-                        AnimatedAlign(
-                          alignment: Alignment(0, -1 - (-0.152 * _itemIndex)),
-                          duration: widget.floatingAnimationDuration,
-                          curve: widget.curve,
-                          child: Container(
-                            height: sideBarItemHeight,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                                color: widget.animatedContainerColor,
-                                borderRadius: BorderRadius.circular(12)),
-                            child: ListView(
-                              shrinkWrap: false,
-                              clipBehavior: Clip.antiAliasWithSaveLayer,
-                              scrollDirection: Axis.horizontal,
-                              children: [
-                                Icon(
-                                  widget.sidebarItems[_itemIndex.floor()]
-                                      .iconSelected,
-                                  color: Colors.white,
-                                ),
-                                if (_width >= widget.widthSwitch && !_minimize)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 12.0),
-                                    child: Text(
-                                      widget.sidebarItems[_itemIndex.floor()]
-                                          .text,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: widget.textStyle,
-                                    ),
+                        SizedBox(
+                          height: 786.0,
+                          child: Stack(
+                            children: [
+                              ListView.separated(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemBuilder: (context, index) {
+                                  return sideBarItem(
+                                      textStyle: widget.textStyle,
+                                      unselectedIconColor: widget.unselectedIconColor,
+                                      unSelectedTextColor: widget.unSelectedTextColor,
+                                      widthSwitch: widget.widthSwitch,
+                                      minimize: _minimize,
+                                      height: sideBarItemHeight,
+                                      hoverColor: widget.hoverColor,
+                                      splashColor: widget.splashColor,
+                                      highlightColor: widget.highlightColor,
+                                      width: _width,
+                                      icon: widget.sidebarItems[index].iconUnselected ?? widget.sidebarItems[index].iconSelected,
+                                      text: widget.sidebarItems[index].text,
+                                      onTap: () => moveToNewIndex(index));
+                                },
+                                separatorBuilder: (context, index) {
+                                  if (index == widget.sidebarItems.length - 2 && widget.settingsDivider) {
+                                    return Divider(
+                                      height: 12,
+                                      thickness: 0.2,
+                                      color: widget.dividerColor,
+                                    );
+                                  } else {
+                                    return const SizedBox(
+                                      height: 8,
+                                    );
+                                  }
+                                },
+                                itemCount: widget.sidebarItems.length,
+                              ),
+                              AnimatedAlign(
+                                alignment: Alignment(0, -1 - (-0.152 * value)),
+                                duration: widget.floatingAnimationDuration,
+                                curve: widget.curve,
+                                child: Container(
+                                  height: sideBarItemHeight,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(color: widget.animatedContainerColor, borderRadius: BorderRadius.circular(12)),
+                                  child: ListView(
+                                    shrinkWrap: false,
+                                    clipBehavior: Clip.antiAliasWithSaveLayer,
+                                    scrollDirection: Axis.horizontal,
+                                    children: [
+                                      Icon(
+                                        widget.sidebarItems[value].iconSelected,
+                                        color: Colors.white,
+                                      ),
+                                      if (_width >= widget.widthSwitch && !_minimize)
+                                        Padding(
+                                          padding: const EdgeInsets.only(left: 12.0),
+                                          child: Text(
+                                            widget.sidebarItems[value].text,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: widget.textStyle,
+                                          ),
+                                        ),
+                                    ],
                                   ),
-                              ],
-                            ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
+                ),
+                if (_width >= widget.widthSwitch)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                    child: IconButton(
+                        hoverColor: Colors.black38,
+                        splashColor: Colors.black87,
+                        highlightColor: Colors.black,
+                        onPressed: () {
+                          setState(() => _minimize = !_minimize);
+                        },
+                        icon: Icon(_width >= widget.widthSwitch && _minimize ? CupertinoIcons.arrow_right : Icons.space_dashboard_outlined,
+                            color: widget.selectedIconColor)),
+                  )
+              ],
             ),
-          ),
-          if (_width >= widget.widthSwitch)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              child: IconButton(
-                  hoverColor: Colors.black38,
-                  splashColor: Colors.black87,
-                  highlightColor: Colors.black,
-                  onPressed: () {
-                    setState(() => _minimize = !_minimize);
-                  },
-                  icon: Icon(
-                      _width >= widget.widthSwitch && _minimize
-                          ? CupertinoIcons.arrow_right
-                          : Icons.space_dashboard_outlined,
-                      color: widget.selectedIconColor)),
-            )
-        ],
-      ),
-    );
+          );
+        });
   }
 }
 
